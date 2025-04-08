@@ -1,36 +1,30 @@
 import requests
+from bs4 import BeautifulSoup
 
 from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
+import re
+
+
+url = 'https://www.sec.gov/data-research/sec-markets-data/financial-statement-data-sets'
 
 headers = {
     "User-Agent": "jo boulement jo@gmx.at",  # Set the User-Agent to identify the client
     "Accept-Encoding": "gzip, deflate"  # Accept gzip and deflate encodings
 }
 
-def generate_sec_urls(start_year=2009, start_quarter = 1):
-    urls = []
+response = requests.get(url, headers = headers)
 
-    while True:
-        url = f'https://www.sec.gov/files/dera/data/financial-statement-data-sets/{start_year}q{start_quarter}.zip'
-        print(f'checking url:{url}')
-        response = requests.get(url, headers = headers)
-        print(response.status_code)
-        if response.status_code == 200:
-            urls.append(url)
-            start_quarter += 1
-            if start_quarter > 4:
-                start_quarter = 1
-                start_year += 1
-        else:
-            break
-
-    return urls
+soup = BeautifulSoup(response.content, 'html.parser')
 
 
-valid_urls = generate_sec_urls()
+zip_links = []
 
+for link in soup.find_all('a', href=True):
+    href = link['href']
+    if href.endswith('.zip'):
+        zip_links.append('https://www.sec.gov'+ href)
 
-
+zip_links
 
 
 connection_string = ''
@@ -49,7 +43,7 @@ def download_to_blob(url, blob_name):
 
 
 def main():
-    for url in valid_urls:
+    for url in zip_links:
         blob_name = url.split('/')[-1]
         download_to_blob(url, blob_name)
 
